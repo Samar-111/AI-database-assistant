@@ -1,4 +1,4 @@
-# 🤖 AI Database Assistant
+# 🤖 Hyperion AI - DB Insights Engine
 
 <p align="center">
   <img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=30&pause=1000&color=00C2FF&center=true&vCenter=true&width=800&lines=Talk+to+Your+Database+in+Natural+Language;AI-Powered+SQL+Generation;FastAPI+%7C+React+%7C+LLMs+%7C+SQLite" />
