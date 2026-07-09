@@ -254,6 +254,7 @@ def generate_sql(user_prompt, schema):
     return sql_clean.strip()
 
 
+# --- 6. Core Interaction Hub (Protected against Null AI Returns) ---
 user_question = st.text_input("📝 Enter your inquiry in plain text:", placeholder="e.g., Show me total tracks per album.")
 
 if st.button("✨ Compile & Execute Query Pipeline") and user_question:
@@ -263,24 +264,29 @@ if st.button("✨ Compile & Execute Query Pipeline") and user_question:
             st.error("🔒 Security Guardrail: Destructive operations (DROP, DELETE, UPDATE, ALTER) are explicitly blocked.")
         else:
             generated_sql = generate_sql(user_question, schema_context)
-            result = run_query(generated_sql)
             
-            if result["error"]:
-                st.error(f"❌ Structural Compilation Error: {result['error']}")
+            # CRITICAL CHECK: If the AI failed completely due to overloads, stop here gracefully
+            if generated_sql is None or generated_sql == "":
                 st.session_state.current_df = None
                 st.session_state.current_sql = None
-                st.session_state.history.append({"q": user_question, "sql": generated_sql, "status": "Failed"})
             else:
-                if result["data"] is not None and len(result["data"]) > 0:
-                    st.session_state.current_df = pd.DataFrame(result["data"], columns=result["columns"])
-                    st.session_state.current_sql = generated_sql
-                    st.session_state.history.append({"q": user_question, "sql": generated_sql, "status": "Success"})
-                elif result["data"] is not None and len(result["data"]) == 0:
-                    st.info("⚠️ Query compiled successfully but targeted database entity contains zero rows.")
+                result = run_query(generated_sql)
+                
+                if result["error"]:
+                    st.error(f"❌ Structural Compilation Error: {result['error']}")
                     st.session_state.current_df = None
                     st.session_state.current_sql = None
-                    st.session_state.history.append({"q": user_question, "sql": generated_sql, "status": "Success"})
-
+                    st.session_state.history.append({"q": user_question, "sql": generated_sql, "status": "Failed"})
+                else:
+                    if result["data"] is not None and len(result["data"]) > 0:
+                        st.session_state.current_df = pd.DataFrame(result["data"], columns=result["columns"])
+                        st.session_state.current_sql = generated_sql
+                        st.session_state.history.append({"q": user_question, "sql": generated_sql, "status": "Success"})
+                    elif result["data"] is not None and len(result["data"]) == 0:
+                        st.info("⚠️ Query compiled successfully but targeted database entity contains zero rows.")
+                        st.session_state.current_df = None
+                        st.session_state.current_sql = None
+                        st.session_state.history.append({"q": user_question, "sql": generated_sql, "status": "Success"})
 
 if st.session_state.current_df is not None:
     df = st.session_state.current_df
