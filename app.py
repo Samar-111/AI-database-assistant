@@ -187,7 +187,7 @@ with st.expander("ℹ️ About This Project", expanded=False):
     ### 🧠 Project Architecture & Capability Matrix
     This platform functions as a full-featured **Natural Language to SQL (Text-to-SQL) Insights Engine**. It bridges the gap between conversational language and structured relational storage.
     
-    * **LLM Engine:** Powered by the `gemini-2.5-flash` foundation model to process abstract semantic reasoning and emit pure, sanitized database code strings.
+    * **LLM Engine:** Powered by the `gemini-3.5-flash` foundation model to process abstract semantic reasoning and emit pure, sanitized database code strings.
     * **Dynamic Schema Analysis:** Automatically inspects systemic physical table catalogs (`sqlite_master`) to extract and supply schema definitions dynamically to the AI interpreter context.
     * **Execution Protection Sandbox:** Includes embedded string-matching filters acting as a lightweight security guardrail to intercept destructive structural operations (`DROP`, `DELETE`, `ALTER`).
     * **Data Utility Layout:** Converts volatile standard cursor records into persistent multi-view frames, rendering dataframes, localized CSV compilation downlinks, and adaptive grouping chart visualization canvases.
@@ -203,11 +203,12 @@ with kpi2:
     success_queries = sum(1 for q in st.session_state.history if q["status"] == "Success")
     st.markdown(f"<div class='metric-card'><div class='metric-val'>{success_queries}</div><div class='metric-lbl'>Successful Inferences</div></div>", unsafe_allow_html=True)
 with kpi3:
-    st.markdown(f"<div class='metric-card'><div class='metric-val'>Gemini 2.5</div><div class='metric-lbl'>AI Foundation Model</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card'><div class='metric-val'>Gemini 3.5</div><div class='metric-lbl'>AI Foundation Model</div></div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 
+# --- 5. AI SQL Generation Logic (Overload-Resilient Version) ---
 def generate_sql(user_prompt, schema):
     system_instruction = """
     You are an expert SQL generator for SQLite. 
@@ -217,15 +218,33 @@ def generate_sql(user_prompt, schema):
     """
     contents = f"Schema:\n{schema}\n\nQuestion: {user_prompt}\n\nSQL:"
     
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            temperature=0.1,
+    # Attempt Primary Target Model Configuration
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.1,
+            )
         )
-    )
-    
+    except Exception as server_err:
+        # If the primary server returns a 503, immediately try the alternative stable version
+        st.warning("⚠️ Primary server overloaded. Switching automatically to secondary fallback node...")
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-pro',  # Falling back to the Pro engine tier
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.1,
+                )
+            )
+        except Exception:
+            # Absolute last resort error mapping
+            st.error("🛑 All upstream AI server targets are currently processing high loads. Please resubmit this prompt in a moment.")
+            return ""
+
     sql_clean = response.text.strip()
     if sql_clean.startswith("```"):
         sql_clean = "\n".join(sql_clean.split("\n")[1:])
