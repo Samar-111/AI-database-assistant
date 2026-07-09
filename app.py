@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from google import genai
 from google.genai import types
+import time
 
 
 st.set_page_config(
@@ -218,28 +219,37 @@ def generate_sql(user_prompt, schema):
     """
     contents = f"Schema:\n{schema}\n\nQuestion: {user_prompt}\n\nSQL:"
     
-    try:
-        response = client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.1,
+    max_retries = 3
+    delay = 1 
+    
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.1,
+                )
             )
-        )
-        
-        sql_clean = response.text.strip()
-        if sql_clean.startswith("```"):
-            sql_clean = "\n".join(sql_clean.split("\n")[1:])
-        if sql_clean.endswith("```"):
-            sql_clean = sql_clean.rsplit("```", 1)[0]
-        return sql_clean.strip()
-        
-    except Exception as e:
-        st.error(f"🛑 Generation Channel Interrupted: {str(e)}")
-        return None
-
-
+            
+            sql_clean = response.text.strip()
+            if sql_clean.startswith("```"):
+                sql_clean = "\n".join(sql_clean.split("\n")[1:])
+            if sql_clean.endswith("```"):
+                sql_clean = sql_clean.rsplit("```", 1)[0]
+            return sql_clean.strip()
+            
+        except Exception as e:
+           
+            if "503" in str(e) and attempt < max_retries - 1:
+                st.warning(f"⚠️ Google API is busy. Retrying automatically in {delay}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                delay *= 2  
+            else:
+                
+                st.error(f"🛑 Generation Channel Interrupted after {max_retries} attempts: {str(e)}")
+                return None
 user_question = st.text_input("📝 Enter your inquiry in plain text:", placeholder="e.g., Show me total tracks per album.")
 
 if st.button("✨ Compile & Execute Query Pipeline") and user_question:
@@ -250,7 +260,7 @@ if st.button("✨ Compile & Execute Query Pipeline") and user_question:
         else:
             generated_sql = generate_sql(user_question, schema_context)
             
-            # CRITICAL CHECK: If the AI failed completely due to overloads, stop here gracefully
+           
             if generated_sql is None or generated_sql == "":
                 st.session_state.current_df = None
                 st.session_state.current_sql = None
