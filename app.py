@@ -208,7 +208,7 @@ with kpi3:
 st.markdown("<br>", unsafe_allow_html=True)
 
 
-# --- 5. AI SQL Generation Logic (Overload-Resilient Version) ---
+
 def generate_sql(user_prompt, schema):
     system_instruction = """
     You are an expert SQL generator for SQLite. 
@@ -218,43 +218,28 @@ def generate_sql(user_prompt, schema):
     """
     contents = f"Schema:\n{schema}\n\nQuestion: {user_prompt}\n\nSQL:"
     
-    # Attempt Primary Target Model Configuration
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash',
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.1,
             )
         )
-    except Exception as server_err:
-        # If the primary server returns a 503, immediately try the alternative stable version
-        st.warning("⚠️ Primary server overloaded. Switching automatically to secondary fallback node...")
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.5-pro',  # Falling back to the Pro engine tier
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.1,
-                )
-            )
-        except Exception:
-            # Absolute last resort error mapping
-            st.error("🛑 All upstream AI server targets are currently processing high loads. Please resubmit this prompt in a moment.")
-            return ""
-
-    sql_clean = response.text.strip()
-    if sql_clean.startswith("```"):
-        sql_clean = "\n".join(sql_clean.split("\n")[1:])
-    if sql_clean.endswith("```"):
-        sql_clean = sql_clean.rsplit("```", 1)[0]
         
-    return sql_clean.strip()
+        sql_clean = response.text.strip()
+        if sql_clean.startswith("```"):
+            sql_clean = "\n".join(sql_clean.split("\n")[1:])
+        if sql_clean.endswith("```"):
+            sql_clean = sql_clean.rsplit("```", 1)[0]
+        return sql_clean.strip()
+        
+    except Exception as e:
+        st.error(f"🛑 Generation Channel Interrupted: {str(e)}")
+        return None
 
 
-# --- 6. Core Interaction Hub (Protected against Null AI Returns) ---
 user_question = st.text_input("📝 Enter your inquiry in plain text:", placeholder="e.g., Show me total tracks per album.")
 
 if st.button("✨ Compile & Execute Query Pipeline") and user_question:
