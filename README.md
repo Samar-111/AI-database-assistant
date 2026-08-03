@@ -30,6 +30,9 @@
 
 **AI Database Assistant** is an intelligent application that allows users to interact with SQL databases using **natural language** instead of writing SQL queries manually.
 
+#LIVE LINK
+**https://ai-database-assistant-vdntc3iprjemb8yw5nmdvr.streamlit.app/
+
 Simply ask questions like:
 
 > *"Show all customers who placed orders last month."*
