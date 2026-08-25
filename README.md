@@ -149,24 +149,11 @@ It combines the power of **Large Language Models** with traditional databases to
 
 ```bash
 AI-database-assistant/
-│
-├── backend/
-│   ├── app.py
-│   ├── api/
-│   ├── models/
-│   ├── database/
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── vite.config.js
-│
-├── images/
-│
+├── .gitignore
 ├── README.md
-└── LICENSE
+├── app.py
+├── requirements.txt
+└── test_app.py
 ```
 
 ---
