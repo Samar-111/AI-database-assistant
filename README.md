@@ -116,7 +116,7 @@ It combines the power of **Large Language Models** with traditional databases to
 
 ---
 
-## Chat Interface
+## Chat Interface window
 
 <p align="center">
 <img width="1855" height="972" alt="image" src="https://github.com/user-attachments/assets/a45bac29-6081-4e8e-9f69-217044812179" />
